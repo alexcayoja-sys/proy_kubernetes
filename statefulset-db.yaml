@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: finance-db
+spec:
+  selector:
+    matchLabels:
+      app: finance-app
+      tier: database
+  serviceName: "finance-db-service"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: finance-app
+        tier: database
+    spec:
+      securityContext:
+        runAsUser: 999  # Ejemplo de ID de usuario no root
+        fsGroup: 999
+      containers:
+      - name: mysql-db
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: db_password
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: db_user
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: db_password
+        - name: MYSQL_DATABASE
+          value: finanzas_db
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+  volumeClaimTemplates:
+  - metadata:
+      name: mysql-persistent-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 5Gi
